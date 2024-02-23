@@ -1,0 +1,16 @@
+---
+k8smaster:
+  short_name: "k8smaster"
+  host_name: "k8smaster.ovn"
+  memory: 4096
+  cpus: 4
+k8sminion1:
+  short_name: "k8sminion1"
+  host_name: "k8sminion1.ovn"
+  memory: 4096
+  cpus: 4
+k8sminion2:
+  short_name: "k8sminion2"
+  host_name: "k8sminion2.ovn"
+  memory: 4096
+  cpus: 4
