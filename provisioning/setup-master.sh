@@ -56,8 +56,9 @@ echo \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # kubernetes components
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://dl.k8s.io/apt/doc/apt-key.gpg
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 sudo apt update
 
@@ -80,7 +81,7 @@ sudo crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps
 
 # Install kubernetes
 # apt-cache policy  kubelet : To get the version numbers
-K8S_VERSION=1.28.2-00
+K8S_VERSION=1.29.2-1.1
 sudo apt install -y kubelet=$K8S_VERSION kubeadm=$K8S_VERSION kubectl=$K8S_VERSION
 
 sudo apt-mark hold kubelet kubeadm kubectl
@@ -90,7 +91,8 @@ echo "KUBELET_EXTRA_ARGS=\"--node-ip=$IP\"" | sudo tee /etc/default/kubelet
 sudo systemctl restart kubelet
 
 # kubeadm init
-sudo kubeadm init --pod-network-cidr=192.168.64.0/21 --apiserver-advertise-address=$IP --service-cidr=172.31.1.0/24 2>&1 | tee kubeadm.log
+sudo kubeadm init --pod-network-cidr=192.168.64.0/21 --apiserver-advertise-address=$IP \
+  --service-cidr=172.31.1.0/24 --skip-phases addon/kube-proxy 2>&1 | tee kubeadm.log
 grep -A1 "kubeadm join" kubeadm.log | sudo tee /vagrant/kubeadm.log
 
 mkdir -p $HOME/.kube
@@ -107,8 +109,9 @@ while true; do
     sleep 1
 done
 
-# Delete kube-proxy daemonset
-kubectl -n kube-system delete daemonset kube-proxy
+# Note: To delete kube-proxy daemonset, if there was one.
+# The "--skip-phases addon/kube-proxy" flag above should be enough.
+# kubectl -n kube-system delete daemonset kube-proxy ||:
 
 # Add aliases
 echo "alias k='kubectl'" >> .bashrc
@@ -116,3 +119,6 @@ echo "alias kk='kubectl -n kube-system'" >> .bashrc
 echo "alias kn='kubectl -n ovn-kubernetes'" >> .bashrc
 echo "alias ko='kubectl -n ovn-kubernetes'" >> .bashrc
 
+# HACK YUCK: work around known issue with Helm on DNS config
+sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+echo "nameserver 9.9.9.9" | sudo tee /etc/resolv.conf

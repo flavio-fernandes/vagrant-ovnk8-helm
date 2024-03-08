@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-22.04"
 
   config.nfs.verify_installed = false
-  config.vm.synced_folder ".", "/vagrant", type: "sshfs"
+  config.vm.synced_folder ".", "/vagrant", type: "sshfs", sshfs_opts: "cache=yes,kernel_cache,compression=no,large_read"
   
   # For the private network, the following route in host is added by vagrant/virtualbox
   # 192.168.56.0/24 dev vboxnet0 proto kernel scope link src 192.168.56.1
